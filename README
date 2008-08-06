@@ -1,0 +1,5 @@
+The general structure is one directory per language, plus a directory
+"examples" which should contain a set of example files to be
+used as test-beds.
+
+-M
