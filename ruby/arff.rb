@@ -7,7 +7,7 @@
 # - a bit slow?
 #
 
-class String
+class String  # :nodoc:
   def truncate(maxlen)
     if length > maxlen
       self[0..maxlen-3] + "..."
@@ -18,10 +18,35 @@ class String
 end
 
 module ARFF
+  # A class for loading and saving ARFF-Files.
+  #
+  # Currently, handles the following attributes:
+  #
+  # * real, numeric, integer, string attributes.
+  #
+  # Date/relational attributes and sparse data is not supported yet.
+  #
+  # The first comment in a file is available via the +comment+
+  # attribute of the class.
+  #
+  # You can either load a file using ARFF.load or load the
+  # data from a string using ARFF.string.
   class ARFFFile
-    attr_accessor :relation, :comment
-    attr_reader :attribute_names, :data
+    # The name of the data set.
+    attr_accessor :relation
+    # The initial comment in the file
+    attr_accessor :comment
+    # The names of the attributes (use define_attribute to set).
+    attr_reader :attribute_names
+    # The attribute types (hash) (use define_attribute to set).
+    attr_reader :attribute_types
+    # Additional data on the types (hash) (use define_attribute
+    # to set).
+    attr_reader :attribute_data
+    # The actual data.
+    attr_accessor :data
 
+    # Create new ARFF File.
     def initialize
       @relation = ''
       @comment = []
@@ -29,37 +54,55 @@ module ARFF
       @attribute_types = Hash.new
       @attribute_data = Hash.new
       @data = []
+      @state = :comment
     end
 
+    # Define an attribute by its name, type and potentially 
+    # further data. (For example, for ordinal types, the possible
+    # values.
     def define_attribute(name, type, data=nil)
       @attribute_names << name
       @attribute_types[name] = type
       @attribute_data[name] = data if data
     end
 
+    # Read the type of attribute +name+.
     def attribute_type(name)
       @attribute_types[name]
     end
 
-    def attribute_data(name)
-      @attribute_data[name]
+    # Read the attribute data.
+    #def attribute_data(name)
+    #  @attribute_data[name]
+    #end
+
+    # Load an ARFF file.
+    def self.load(file)
+      arff = nil
+      open(file, 'r') {|f| arff = ARFFFile.parse(f.read) }
+      return arff
     end
 
-    # Load a file
-    def load(file)
-      @state = :comment
-      open(file, 'r') {|f| parse(f.read) }
+    # Construct an ARFFFile from a string.
+    def self.parse(string)
+      arff = ARFFFile.new
+      arff.parse_file(string)
+      return arff
     end
 
-    def parse(string)
+    # Load contents from a string.
+    def parse_file(string)
       string.split("\n").each_with_index do |line, lineno|
         parse_line(line.chomp, lineno+1)
       end
     end
 
+    #######
     private
+    #######
 
-    # Parse a single line. Uses a small state machine to keep track of where we are
+    # Parse a single line. Uses a small state machine to keep track of
+    # where we are. First comment is collected
     def parse_line(line, lineno)
       case @state
       when :comment
@@ -86,10 +129,9 @@ module ARFF
       end
     end
 
-    # Define an attribute as specified by line
+    # Define an attribute as specified by line.
     def parse_attribute_definition(line, lineno)
       keyword, name, type = line.scan /[a-zA-Z_][a-zA-Z0-9_]*|\{[^\}]+\}|\'[^\']+\'|\"[^\"]+\"/
-      #puts "Attribute: #{name} type: #{type}"
       name = name[1...-1] if name[0] == ?' and name[-1] == ?'
       name = name[1...-1] if name[0] == ?" and name[-1] == ?"
       if type.downcase == 'real' or
@@ -105,32 +147,41 @@ module ARFF
       end
     end
       
-    # Define the name of the relation based on line
+    # Define the name of the relation based on line.
     def parse_relation_definition(line, lineno)
-      keyword, name = line.scan /[a-zA-Z_][a-zA-Z0-9_]*|\'[^\']+\'|\"[^\"]+\"/
+      keyword, name = line.scan /[a-zA-Z_][a-zA-Z0-9_]*|\'[^\']+?\'|\"[^\"]+?\"/
       #puts "Relation: #{name}"
       @relation = name
     end
 
-    # Parse data line
+    NUMERIC = /\A\s*[+-]?[0-9]+(?:\.[0-9]*(?:[eE]-?[0-9]+)?)?\s*\Z/
+
+    # Parse data line.
     def parse_data(line, lineno)
       if line[0] == ?{ and line[-1] == ?}
         raise "Sparse data not supported (yet)"
       else
         line = line.split(',').map{|s| s.strip}
         if line.size != @attribute_names.size
-          puts "Warning: line #{lineno} does not contain the right number of elements."
+          puts "Warning: line #{lineno} does not contain the right number of elements (should be #{attribute_names.size}, got #{line.size})"
+          return
         end
         datum = []
         line.zip(@attribute_names).each do |e, a|
           case @attribute_types[a]
           when :numeric
-            datum << e.to_f
+            if e =~ NUMERIC
+              datum << e.to_f
+            else
+              puts "Warning: line #{lineno} uses a non-numeric value \"#{e}\" for attribut \"#{a}\"."
+              return
+            end
           when :string
             datum << e
           when :nominal
             unless @attribute_data[a].include? e
-              puts "Warning: line #{lineno} uses an undefined nominal value for attribut \"#{a}\"."
+              puts "Warning: line #{lineno} uses undefined nominal value \"#{e}\" for attribut \"#{a}\"."
+              return
             end
             datum << e
           end
@@ -170,12 +221,12 @@ module ARFF
       s.join "\n"
     end
 
-    # write the arff file to a file
+    # Write the arff file to a file.
     def save(file)
       open(file, "w") {|f| f.write(write)}
     end
 
-    # write the arfffile to a string
+    # Write the arfffile to a string.
     def write
       out = []
       out << '% ' + comment.gsub(/\n/m, "\n% ")
@@ -187,7 +238,7 @@ module ARFF
         when :string
           out << "@attribute #{write_string(a)} numeric"
         when :nominal
-          out << "@attribute #{write_string(a)} {#{attribute_data(a).join(',')}}"
+          out << "@attribute #{write_string(a)} {#{attribute_data[a].join(',')}}"
         end
       end
       out << "\n@data"
@@ -220,19 +271,5 @@ module ARFF
         s
       end
     end
-  end
-end
-
-if __FILE__ == $0
-  require 'pp'
-  Dir.glob('../examples/*.arff').each do |file|
-    puts '-' * 70
-    a = ARFF::ARFFFile.new
-    a.load(file)
-    puts a.dump
-    a.save('temp.arff')
-    b = ARFF::ARFFFile.new
-    b.load('temp.arff')
-    puts b.dump
   end
 end
