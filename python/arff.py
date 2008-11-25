@@ -30,6 +30,50 @@ class ArffFile(object):
             a.lineno += 1
         return a
 
+    def save(self, filename):
+        o = open(filename, 'w')
+        o.write(self.write())
+        o.close()
+
+    def write(self):
+        o = []
+        print self.comment
+        o.append('% ' + re.sub("\n", "\n% ", self.comment))
+        o.append("@relation " + self.esc(self.relation))
+        for a in self.attributes:
+            at = self.attribute_types[a]
+            if at == 'numeric':
+                o.append("@attribute " + self.esc(a) + " numeric")
+            elif at == 'string':
+                o.append("@attribute " + self.esc(a) + " string")
+            elif at == 'nominal':
+                o.append("@attribute " + self.esc(a) +
+                         " {" + ','.join(self.attribute_data[a]) + "}")
+            else:
+                raise "Type " + at + " not supported for writing!"
+        o.append("\n@data")
+        for d in self.data:
+            line = []
+            for e, a in zip(d, self.attributes):
+                at = self.attribute_types[a]
+                if at == 'numeric':
+                    line.append(str(e))
+                elif at == 'string':
+                    line.append(esc(e))
+                elif at == 'nominal':
+                    line.append(e)
+                else:
+                    raise "Type " + at + " not supported for writing!"
+            o.append(','.join(line))
+        return "\n".join(o) + "\n"
+
+    def esc(self, s):
+        "Escape a string if it contains spaces"
+        if re.match(r'\s', s):
+            return "\'" + s + "\'"
+        else:
+            return s
+
     def define_attribute(self, name, atype, data=None):
         self.attributes.append(name)
         self.attribute_types[name] = atype
@@ -38,8 +82,9 @@ class ArffFile(object):
     def parseline(self, l):
         if self.state == 'comment':
             if len(l) > 0 and l[0] == '%':
-                self.comment.append(l)
+                self.comment.append(l[2:])
             else:
+                self.comment = '\n'.join(self.comment)
                 self.state = 'in_header'
                 self.parseline(l)
         elif self.state == 'in_header':
@@ -118,7 +163,9 @@ class ArffFile(object):
 
 #a = ArffFile.read('../examples/diabetes.arff')
 
-a = ArffFile.parse("""@relation foobar
+a = ArffFile.parse("""% yes
+% this is great
+@relation foobar
 @attribute foo {a,b,c}
 @attribute bar real
 @data
@@ -128,4 +175,4 @@ c, d
 d, 3
 """)
 a.dump()
-
+print a.write()
