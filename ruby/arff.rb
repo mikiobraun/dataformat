@@ -236,7 +236,7 @@ module ARFF
         when :numeric
           out << "@attribute #{write_string(a)} numeric"
         when :string
-          out << "@attribute #{write_string(a)} numeric"
+          out << "@attribute #{write_string(a)} string"
         when :nominal
           out << "@attribute #{write_string(a)} {#{attribute_data[a].join(',')}}"
         end
