@@ -9,13 +9,9 @@ import java.io.StringReader;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -141,21 +137,14 @@ public class ArffFile {
     }
 
     /** Define a new attribute. Type must be one of "numeric", "string", and
-     * "nominal". For nominal attributes, you also have to pass the allowed
-     * values using the other overloaded variant of defineAttribute().
-     */
-    public void defineAttribute(String name, String type) {
-        attribute_names.add(name);
-        attribute_types.put(name, type);
-    }
-
-    /** Define a new attribute. For nominal attributes, the allowed values
+     * "nominal". For nominal attributes, the allowed values
      * must also be given. This variant of defineAttribute allows to set this data.
      */
    public void defineAttribute(String name, String type, String[] data) {
         attribute_names.add(name);
         attribute_types.put(name, type);
-        attribute_data.put(name, data);
+        if (data != null)
+            attribute_data.put(name, data);
     }
 
     private void parseAttributeDefinition(String line) throws ArffFileParseError {
@@ -172,9 +161,9 @@ public class ArffFile {
         String lowertype = type.toLowerCase();
 
         if (lowertype.equals("real") || lowertype.equals("numeric") || lowertype.equals("integer")) {
-            defineAttribute(name, "numeric");
+            defineAttribute(name, "numeric", null);
         } else if (lowertype.equals("string")) {
-            defineAttribute(name, "string");
+            defineAttribute(name, "string", null);
         } else if (type.startsWith("{") && type.endsWith("}")) {
             type = type.substring(1, type.length() - 1);
             type = type.trim();
@@ -408,5 +397,13 @@ public class ArffFile {
     /** Add a datum. No checking of the data types is performed! */
     public void add(Object[] datum) {
         data.add(datum);
+    }
+
+    public int getDataSize() {
+        return data.size();
+    }
+
+    public Object[] getDatum(int i) {
+        return data.get(i);
     }
 }
