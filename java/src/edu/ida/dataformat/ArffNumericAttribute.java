@@ -24,7 +24,7 @@ public class ArffNumericAttribute implements ArffAttribute {
         return "numeric";
     }
 
-    public Object parseValue(String token) {
+    public Object parseValue(ArffFile arff, String token) {
         return Double.parseDouble(token);
     }
 }

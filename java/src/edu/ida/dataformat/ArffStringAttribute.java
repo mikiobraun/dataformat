@@ -21,7 +21,7 @@ public class ArffStringAttribute implements ArffAttribute {
             return false;
     }
 
-    public Object parseValue(String token) {
+    public Object parseValue(ArffFile arff, String token) {
         return token;
     }
 

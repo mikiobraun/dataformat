@@ -17,5 +17,5 @@ public interface ArffAttribute {
     public boolean parseAttribute(ArffFile arff, String name, String spec);
 
     /** Parse a value in the data section. */
-    public Object parseValue(String token);
+    public Object parseValue(ArffFile arff, String token);
 }
