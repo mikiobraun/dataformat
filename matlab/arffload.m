@@ -6,13 +6,14 @@ function ARFF = arffload(filename)
 %
 % RETURNS
 %    ARFF struct with fields
-%    .attributes      - attribute names
-%    .attribute_types - attribute types
-%    .attribute_data  - attribute data
-%    .data            - the actual data as cell-array
-%    .comment         - the initial comment of the file
-%    .size            - number of items
-%    .warnings        - if exists, number of parse errors
+%      .relation        - name of the relation
+%      .attributes      - attribute names
+%      .attribute_types - attribute types
+%      .attribute_data  - attribute data
+%      .data            - the actual data as cell-array
+%      .comment         - the initial comment of the file
+%      .size            - number of items
+%      .warnings        - if exists, number of parse errors
 %
 % DESCRIPTION
 %    arffloads loads an arff file and returns a structure
@@ -26,7 +27,7 @@ f = fopen(filename, 'r');
 
 state = 'comment';
 
-comment = char();
+comment = {};
 retry = 0;
 lineno = 0;
 warnings = 0;
@@ -48,11 +49,14 @@ while ~feof(f)
   
   switch state
    case 'comment' %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if length(l) > 1 && l(1) == '%'
-      if length(l) > 2
-        comment = [ comment, '\n', l(2:end) ];
+    if length(l) >= 1 && l(1) == '%'
+      if length(l) >= 2
+        if l(2) == ' '
+          l = l(2:end);
+        end
+        comment = horzcat(comment,  l(2:end));
       else
-        comment = [ comment, '\n' ];
+        comment = horzcat(comment, '');
       end
     else
       state = 'header';
@@ -81,16 +85,18 @@ while ~feof(f)
        otherwise
         % paste type definition together in case there was
         % a space in there
-        if type(1) == '{' && type(end) ~= '}'
-          J = 3;
-          while J <= length(W) && type(1) == '{' && type(end) ~= '}'
-            J = J + 1;
-            type = horzcat(type, W{J});
-          end
-          if J > length(W);
-            warning(['syntax error in nominal attribute definition: missing ' ...
-                     'closing "}"'])
-            break
+        if type(1) == '{'
+          if type(end) ~= '}'
+            J = 3;
+            while J <= length(W) && type(1) == '{' && type(end) ~= '}'
+              J = J + 1;
+              type = horzcat(type, W{J});
+            end
+            if J > length(W);
+              warning(['syntax error in nominal attribute definition: missing ' ...
+                       'closing "}"'])
+              break
+            end
           end
           
           % check for nominal type definition
@@ -231,7 +237,7 @@ end
 
 function warning(msg)
 fprintf('warning line %d: %s\n', lineno, msg);
-warning = warning + 1;
+warnings = warnings + 1;
 end
 
 end % of arffload
