@@ -278,6 +278,12 @@ public class ArffFile {
         return s.toString();
     }
 
+    /** Formats an array of Objects in the passed StringBuilder using toString()
+     * and using del as the delimiter.
+     *
+     * For example, on <tt>objects = { 1, 2, 3 }</tt>, and <tt>del = " + "</tt>, you get
+     * <tt>"1 + 2 + 3"</tt>.
+     */
     private void joinWith(Object[] objects, StringBuilder s, String del) {
         boolean first = true;
         for (Object o : objects) {
