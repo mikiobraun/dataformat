@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2008, Mikio L. Braun, Cheng Soon Ong, Soeren Sonnenburg
 # All rights reserved.
 #
@@ -91,7 +92,7 @@ class ArffFile(object):
         a.state = 'comment'
         a.lineno = 1
         for l in s.splitlines():
-            a.parseline(l)
+            a.__parseline(l)
             a.lineno += 1
         return a
 
@@ -104,7 +105,7 @@ class ArffFile(object):
     def write(self):
         """Write an arff structure to a string."""
         o = []
-        print self.comment
+        #print self.comment
         o.append('% ' + re.sub("\n", "\n% ", self.comment))
         o.append("@relation " + self.esc(self.relation))
         for a in self.attributes:
@@ -177,12 +178,13 @@ class ArffFile(object):
         p = re.compile(r'[a-zA-Z_][a-zA-Z0-9_]*|\{[^\}]+\}|\'[^\']+\'|\"[^\"]+\"')
         l = [s.strip() for s in p.findall(l)]
         name = l[1]
-        atype = l[2].lower()
-        if (atype == 'real' or
-            atype == 'numeric' or
-            atype == 'integer'):
+        atype = l[2]
+        atypel = atype.lower()
+        if (atypel == 'real' or
+            atypel == 'numeric' or
+            atypel == 'integer'):
             self.define_attribute(name, 'numeric')
-        elif atype == 'string':
+        elif atypel == 'string':
             self.define_attribute(name, 'string')
         elif atype[0] == '{' and atype[-1] == '}':
             values = [s.strip () for s in atype[1:-1].split(',')]
@@ -232,10 +234,10 @@ class ArffFile(object):
             print d
     
 
-#a = ArffFile.read('../examples/diabetes.arff')
 
 if __name__ == '__main__':
-    a = ArffFile.parse("""% yes
+    if False:
+        a = ArffFile.parse("""% yes
 % this is great
 @relation foobar
 @attribute foo {a,b,c}
@@ -246,5 +248,8 @@ b, 2
 c, d
 d, 3
 """)
-    a.dump()
+        a.dump()
+
+    a = ArffFile.load('../examples/diabetes.arff')
+
     print a.write()
