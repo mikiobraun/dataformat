@@ -30,8 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-import re
-import sys
+import re, sys
 
 class ArffFile(object):
     """An ARFF File object describes a data set consisting of a number
@@ -204,6 +203,8 @@ class ArffFile(object):
             if at == 'numeric':
                 if re.match(r'[+-]?[0-9]+(?:\.[0-9]*(?:[eE]-?[0-9]+)?)?', v):
                     datum.append(float(v))
+                elif v == '?':
+                    datum.append(float('nan'))
                 else:
                     self.__print_warning('non-numeric value %s for numeric attribute %s' % (v, n))
                     return
@@ -212,6 +213,8 @@ class ArffFile(object):
             elif at == 'nominal':
                 if v in self.attribute_data[n]:
                     datum.append(v)
+                elif v == '?':
+                    datum.append(None)                     
                 else:
                     self.__print_warning('incorrect value %s for nomial attribute %s' % (v, n))
                     return
