@@ -105,7 +105,6 @@ class ArffFile(object):
     def write(self):
         """Write an arff structure to a string."""
         o = []
-        #print self.comment
         o.append('% ' + re.sub("\n", "\n% ", self.comment))
         o.append("@relation " + self.esc(self.relation))
         for a in self.attributes:
@@ -190,12 +189,13 @@ class ArffFile(object):
             values = [s.strip () for s in atype[1:-1].split(',')]
             self.define_attribute(name, 'nominal', values)
         else:
-            print "Unsupported type " + atype + " for attribute " + name + "."
+            self.__print_warning("unsupported type " + atype + " for attribute " + name + ".")
+
 
     def __parse_data(self, l):
         l = [s.strip() for s in l.split(',')]
         if len(l) != len(self.attributes):
-            print "Warning: line %d contains wrong number of values" % self.lineno
+            self.__print_warning("contains wrong number of values")
             return 
 
         datum = []
